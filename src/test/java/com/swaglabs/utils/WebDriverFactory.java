@@ -34,17 +34,20 @@ public class WebDriverFactory {
                 // FIX: Add essential arguments to prevent conflicts
                 chromeOptions.addArguments("--no-sandbox");
                 chromeOptions.addArguments("--disable-dev-shm-usage");
-                chromeOptions.addArguments("--disable-extensions");
-                chromeOptions.addArguments("--remote-debugging-port=0");
-                chromeOptions.addArguments("--disable-web-security");
-                chromeOptions.addArguments("--allow-running-insecure-content");
+                chromeOptions.addArguments("--disable-gpu");
+                chromeOptions.addArguments("--remote-allow-origins=*");
+//                chromeOptions.addArguments("--disable-extensions");
+//                chromeOptions.addArguments("--remote-debugging-port=0");
+//                chromeOptions.addArguments("--disable-web-security");
+//                chromeOptions.addArguments("--allow-running-insecure-content");
 
                 // Optional: run in Incognito to avoid session leftovers
                 chromeOptions.addArguments("--incognito");
 
                 if (headless) {
-                    chromeOptions.addArguments("--headless=new", "--window-size=1920,1080");
-                    chromeOptions.addArguments("--disable-gpu"); // Important for headless mode
+                    chromeOptions.addArguments("--headless=new");
+                    chromeOptions.addArguments("--window-size=1920,1080"); // Important for headless mode
+
                 }
 
                 driver = new ChromeDriver(chromeOptions);
