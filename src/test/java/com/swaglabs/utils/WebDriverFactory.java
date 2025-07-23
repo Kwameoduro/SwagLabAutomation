@@ -29,7 +29,7 @@ public class WebDriverFactory {
                 chromeOptions.setExperimentalOption("prefs", prefs);
 
                 // FIX: Add unique user data directory to prevent session conflicts
-                chromeOptions.addArguments("--user-data-dir=/tmp/chrome_test_" + System.currentTimeMillis());
+//                chromeOptions.addArguments("--user-data-dir=/tmp/chrome_test_" + System.currentTimeMillis());
 
                 // FIX: Add essential arguments to prevent conflicts
                 chromeOptions.addArguments("--no-sandbox");
