@@ -34,7 +34,7 @@ permissions:
 
 env:
   MAVEN_OPTS: "-Xmx2048m -Xms1024m"
-  ALLURE_RESULTS_DIR: target/allure-results
+  ALLURE_RESULTS_DIR: allure-results
 
 jobs:
   test-and-report:
