@@ -130,4 +130,43 @@ public class CheckoutTest extends BaseTest {
         CartPage cartPage = new CartPage(driver);
         cartPage.clickCheckout();
     }
+
+    @Test
+    @Story("User skips selecting items before checkout")
+    @DisplayName("Checkout should not proceed without selecting a product")
+    @Description("This test verifies that the user cannot complete checkout without adding any product to the cart. If allowed, it is a bug.")
+    @Severity(SeverityLevel.CRITICAL)
+    @Issue("BUG-001") // You can link this to your actual issue tracker later
+    public void cannotCheckoutWithoutSelectingItem() {
+        // Step 1: Login
+        LoginPage loginPage = new LoginPage(driver);
+        loginPage.login(TestData.VALID_USERNAME, TestData.VALID_PASSWORD);
+
+        // Step 2: Go to Cart (without selecting anything)
+        HomePage homePage = new HomePage(driver);
+        homePage.goToCart();
+
+        // Step 3: Attempt to proceed to Checkout
+        CartPage cartPage = new CartPage(driver);
+        cartPage.clickCheckout();
+
+        // Step 4: Fill in dummy checkout form
+        CheckoutPage checkoutPage = new CheckoutPage(driver);
+        checkoutPage.enterCheckoutInformation(
+                TestData.FIRST_NAME, TestData.LAST_NAME, TestData.POSTAL_CODE
+        );
+        checkoutPage.clickContinue();
+
+        // Step 5: Verify there are no items shown in checkout overview
+        boolean hasItems = checkoutPage.isAnyItemInCheckoutOverview();
+        assertFalse(hasItems, "BUG: Checkout overview should not be accessible with an empty cart.");
+
+        // Step 6: Optionally, try to finish the order — should not succeed
+        checkoutPage.clickFinish();
+        boolean isConfirmed = checkoutPage.isOrderConfirmed();
+
+        // This assertion will pass if the order is completed — but it's bad behavior
+        assertFalse(isConfirmed, "BUG: Order should not be confirmed when no product was added to cart.");
+    }
+
 }
