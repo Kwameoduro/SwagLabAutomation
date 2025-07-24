@@ -1,5 +1,5 @@
-#  CI Pipeline for SwagLabs Selenium Tests
-name: XYZ Bank Test Automation
+#  SwagLabs Selenium Tests
+name: SwagLabs Test Automation
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    name: Run XYZ Bank Selenium Tests
+    name: Run SwagLabs Selenium Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -45,7 +45,7 @@ jobs:
           mvn clean
           mvn compile test-compile
 
-      - name:  Run XYZ Bank Tests
+      - name:  Run SwagLabs Tests
         run: mvn test -Dheadless=true
         env:
           CHROME_OPTIONS: --headless --no-sandbox --disable-dev-shm-usage --window-size=1920,1080
@@ -111,7 +111,7 @@ jobs:
           status: ${{ needs.test.result }}
           fields: repo,message,commit,author,action,eventName,ref,workflow
           text: |
-            XYZ Bank Tests ${{ needs.test.result == 'success' && '✅ PASSED' || '❌ FAILED' }}
+            SwagLabs Tests ${{ needs.test.result == 'success' && '✅ PASSED' || '❌ FAILED' }}
             
             Test Details:
             • Repository: ${{ github.repository }}
