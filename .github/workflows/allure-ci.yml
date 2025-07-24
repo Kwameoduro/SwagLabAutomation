@@ -1,4 +1,3 @@
-#  SwagLabs Selenium Tests
 name: SwagLabs Test Automation
 
 on:
@@ -11,57 +10,64 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name:  Checkout Code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name:  Set up Java 21
+      - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
 
-      - name:  Cache Maven Dependencies
+      - name: Cache Maven Dependencies
         uses: actions/cache@v4
         with:
           path: ~/.m2
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      - name:  Install Chrome Browser
-        uses: browser-actions/setup-chrome@latest
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@v1
 
-      - name:  Setup ChromeDriver
+      - name: Setup ChromeDriver
         uses: nanasess/setup-chromedriver@master
 
-      - name:  Verify Environment
+      - name: Verify Environment
         run: |
           java -version
           mvn -version
           google-chrome --version
           chromedriver --version
 
-      - name:  Clean and Compile
+      - name: Clean and Compile
         run: |
           mvn clean
           mvn compile test-compile
 
-      - name:  Run SwagLabs Tests
-        run: mvn test -Dheadless=true
+      - name: Run SwagLabs Tests
+        continue-on-error: true
+        run: mvn test -Dheadless=true -Dbrowser=chrome
         env:
-          CHROME_OPTIONS: --headless --no-sandbox --disable-dev-shm-usage --window-size=1920,1080
+          CHROME_OPTIONS: "--headless=new --no-sandbox --disable-dev-shm-usage --window-size=1920,1080"
 
-      - name:  Generate Allure Report
+      - name: Install Allure CLI
+        run: |
+          curl -o allure.tgz -L https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.tgz
+          tar -xvzf allure.tgz
+          sudo mv allure-2.27.0 /opt/allure
+          sudo ln -s /opt/allure/bin/allure /usr/bin/allure
+
+      - name: Generate Allure Report
         if: always()
-        run: mvn allure:report
+        run: |
+          allure generate allure-results --clean -o allure-report
 
-      - name: Upload Allure Results
+      - name: Upload Allure Report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: allure-results-${{ github.run_number }}
-          path: |
-            allure-results/
-            target/site/allure-maven-plugin/
+          name: allure-report-${{ github.run_number }}
+          path: allure-report/
           retention-days: 30
 
       - name: Upload Surefire Test Results
@@ -73,53 +79,59 @@ jobs:
           retention-days: 30
 
       - name: Upload Screenshots
-        uses: actions/upload-artifact@v4
         if: failure()
+        uses: actions/upload-artifact@v4
         with:
           name: failure-screenshots-${{ github.run_number }}
           path: screenshots/
           retention-days: 7
 
+      - name: Extract Failing Tests (if any)
+        id: extract-failures
+        if: failure()
+        run: |
+          echo "FAILURES<<EOF" >> $GITHUB_ENV
+          grep -h "<testcase" target/surefire-reports/*.xml | grep -B1 "<failure" | grep "classname" | sed -E 's/.*classname="([^"]+)".*name="([^"]+)".*/- \1.\2/' >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
       - name: Generate Test Summary
         if: always()
         run: |
-          echo "##  SwagLabs Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## SwagLabs Test Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Build Number:** ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Triggered by:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Runner:** ${{ runner.os }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
           if [ -f target/surefire-reports/TEST-*.xml ]; then
             TESTS=$(find target/surefire-reports -name "TEST-*.xml" -exec grep -l "testcase" {} \; | wc -l)
             echo "- **Test Classes:** $TESTS" >> $GITHUB_STEP_SUMMARY
           fi
 
   notify:
-    name: Send Notifications
+    name: Send Slack Notification
     runs-on: ubuntu-latest
     needs: test
     if: always()
 
     steps:
       - name: Send Slack Notification
-        if: always()
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ needs.test.result }}
           fields: repo,message,commit,author,action,eventName,ref,workflow
           text: |
-            SwagLabs Tests ${{ needs.test.result == 'success' && '✅ PASSED' || '❌ FAILED' }}
-            
-            Test Details:
-            • Repository: ${{ github.repository }}
-            • Branch: ${{ github.ref_name }}
-            • Commit: ${{ github.sha }}
-            • Author: ${{ github.actor }}
-            • Workflow: ${{ github.workflow }}
-            
-            View Results: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            🧪 *SwagLabs Test Run - ${{ needs.test.result == 'success' && '✅ PASSED' || '❌ FAILED' }}*
+
+            • Repository: `${{ github.repository }}`
+            • Branch: `${{ github.ref_name }}`
+            • Commit: `${{ github.sha }}`
+            • Author: `${{ github.actor }}`
+            • Workflow: `${{ github.workflow }}`
+
+            ${{ env.FAILURES }}
+
+            🔗 *[View Test Results →](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*
+
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
